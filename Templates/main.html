@@ -21,16 +21,19 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
 
-        <a class="navbar-brand" href="/">Welcome {{ name }} !</a>
+        {% if is_logged_in %}
+            <a class="navbar-brand" href="/">Welcome {{ name }} !</a>
+        {% endif %}
+
         <div class="d-flex">
-            {% if page == "first_page" or page == "register" or page == "login" or page == "Home" %}
+            {% if page == "first_page" or page == "register" or page == "login" %}
                 <a href="/login" class="btn btn-outline-light me-2">Login</a>
-                <a href="/register" class="btn btn-outline-warning">Register</a>
+                <a href="/register" class="btn btn-outline-warning me-2">Register</a>
                 <a href="/home" class="btn btn-outline-warning">Home</a>
             {% endif %}
 
 
-            {% if page == "logs" or page == "list" or page == "home" %}
+            {% if page == "logs" or page == "list" or page == "home" or page == "view_logs" or page == "user_logs" %}
                 <form action="/logout" method="post">
                     <button type="submit" class="btn btn-danger">Logout</button>
                 </form>
@@ -48,9 +51,15 @@
         {% endif %}
 
         {% if page == "register" %}
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
             <h3 class="text-center mb-3">Create Account</h3>
 
             <form action="/register" method="post">
+
                 <div class="mb-3">
                     <label class="form-label">Name</label>
                     <input type="text" name="name" class="form-control" required>
@@ -71,6 +80,11 @@
                     <input type="password" name="confirm" class="form-control" required>
                 </div>
 
+                <div class="mb-3">
+                    <input type="radio" id="admin" name="role" value="admin">
+                    <label for="admin">Register as Admin</label>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100">Register</button>
 
                 <p class="text-center mt-3">
@@ -81,8 +95,11 @@
         {% endif %}
 
 
-
         {% if page == "login" %}
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
             <h3 class="text-center mb-3">Login</h3>
 
             <form action="/login" method="post">
@@ -111,11 +128,14 @@
         {% endif %}
 
 
-
         {% if page == "logs" %}
             <h3 class="text-center mb-3">Add Log Entry</h3>
 
             <form action="/logs" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
 
                 <div class="mb-3">
                     <label class="form-label">Check In</label>
@@ -137,6 +157,49 @@
         {% endif %}
 
 
+        {% if page == "user_logs" %}
+            <div class="card p-4 mx-auto mt-5" style="width: 400px;">
+                <h3 class="text-center mb-3">Select User</h3>
+
+                {% for u in user_names %}
+                    <form action="/user_logs" method="post" class="d-flex justify-content-between mb-2">
+                        <div>{{ u.name }}</div>
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button type="submit" class="btn btn-primary btn-sm">View Logs</button>
+                    </form>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+
+        {% if page == "view_logs" %}
+            <h2>Logs of {{ name }}</h2>
+
+            {% if logs %}
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Task</th>
+                        <th>Total Hours</th>
+                    </tr>
+
+                    {% for l in logs %}
+                    <tr>
+                        <td>{{ l.date }}</td>
+                        <td>{{ l.check_in }}</td>
+                        <td>{{ l.check_out }}</td>
+                        <td>{{ l.task }}</td>
+                        <td>{{ l.total_hours }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>No logs available</p>
+            {% endif %}
+        {% endif %}
+
 
         {% if page == "list" %}
             <h3 class="text-center mb-4">Log Entries</h3>
@@ -146,6 +209,7 @@
 
                     <thead class="table-dark">
                         <tr>
+                            <th>Date</th>
                             <th>Check In</th>
                             <th>Check Out</th>
                             <th>Task</th>
@@ -156,6 +220,7 @@
                     <tbody>
                     {% for f in data %}
                         <tr>
+                            <td>{{ f.date }}</td>
                             <td>{{ f.check_in }}</td>
                             <td>{{ f.check_out }}</td>
                             <td>{{ f.task }}</td>
@@ -169,7 +234,7 @@
 
 
         {% if page == "home" %}
-            <h3 class="text-center">Welcome, {{ name }}!</h3>
+            <!-- <h3 class="text-center">Welcome, {{ name }}!</h3> -->
 
             <div class="text-center mt-4">
                 <form action="/logout" method="post">
