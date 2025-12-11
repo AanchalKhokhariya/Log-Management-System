@@ -5,6 +5,8 @@
     <title>User Auth</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
 
     <style>
         body {
@@ -21,9 +23,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
 
-        {% if is_logged_in %}
-            <a class="navbar-brand" href="/">Welcome {{ name }} !</a>
-        {% endif %}
+        <a class="navbar-brand">Welcome Log Management System !</a>
 
         <div class="d-flex">
             {% if page == "first_page" or page == "register" or page == "login" %}
@@ -32,8 +32,22 @@
                 <a href="/home" class="btn btn-outline-warning">Home</a>
             {% endif %}
 
+            {% if page in ["view_logs", "user_logs", "add_logs", "list", "home", "screen", "admin_screen"] %}
+                <form action="/add_logs" method="post">
+                    <button type="submit" class="btn btn-success me-2">Add Logs</button>
+                </form>
 
-            {% if page == "logs" or page == "list" or page == "home" or page == "view_logs" or page == "user_logs" %}
+                <form action="/list" method="post">
+                    <button type="submit" class="btn btn-success me-2">View Logs</button>
+                </form>
+
+                {% if role == 1 or page ==  "admin_screen" %}
+                    
+                    <form action="/user_logs" method="get">
+                        <button type="submit" class="btn btn-warning me-2">User List</button>
+                    </form>
+                {% endif %}
+
                 <form action="/logout" method="post">
                     <button type="submit" class="btn btn-danger">Logout</button>
                 </form>
@@ -44,7 +58,8 @@
 
 
 <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
-    <div class="card shadow p-4" style="width: 450px;">
+    <div class="card shadow p-4"style="{% if page == 'list' or page == 'view_logs' or page == 'edit_logs' %} width:100%; max-width:1200px; {% else %} width:450px; {% endif %}">
+
 
         {% if page == "first_page" or page == "Home" %}
                 <h2 class="text-center mb-4">Welcome to Log Management System</h2>
@@ -67,7 +82,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Gmail</label>
-                    <input type="email" name="gmail" class="form-control" required>
+                    <input type="email" name="gmail" class="form-control" pattern="[a-zA-Z0-9._%+-]+@gmail\.com$" title="Please enter a valid Gmail address (example@gmail.com)" required>
                 </div>
 
                 <div class="mb-3">
@@ -87,10 +102,7 @@
 
                 <button type="submit" class="btn btn-primary w-100">Register</button>
 
-                <p class="text-center mt-3">
-                    Already have an account?
-                    <a href="/login">Login</a>
-                </p>
+                <p class="text-center mt-3">Already have an account?<a href="/login">Login</a></p>
             </form>
         {% endif %}
 
@@ -127,11 +139,21 @@
             </form>
         {% endif %}
 
+        {% if page == "screen" %}
+            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        {% endif %}
 
-        {% if page == "logs" %}
+        {% if page == "admin_screen" %}
+            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        {% endif %}
+
+        {% if page == "add_logs" %}
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
             <h3 class="text-center mb-3">Add Log Entry</h3>
 
-            <form action="/logs" method="post">
+            <form action="/add_logs" method="post">
                 <div class="mb-3">
                     <label class="form-label">Date</label>
                     <input type="date" name="date" class="form-control" required>
@@ -159,12 +181,12 @@
 
         {% if page == "user_logs" %}
             <div class="card p-4 mx-auto mt-5" style="width: 400px;">
-                <h3 class="text-center mb-3">Select User</h3>
+                <h3 class="text-center mb-3">User List</h3>
 
                 {% for u in user_names %}
                     <form action="/user_logs" method="post" class="d-flex justify-content-between mb-2">
                         <div>{{ u.name }}</div>
-                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <input type="hidden" name="user_id" value="{{ u.id | string }}">
                         <button type="submit" class="btn btn-primary btn-sm">View Logs</button>
                     </form>
                 {% endfor %}
@@ -192,6 +214,11 @@
                         <td>{{ l.check_out }}</td>
                         <td>{{ l.task }}</td>
                         <td>{{ l.total_hours }}</td>
+                        <td><a href="/edit_log/{{ l.id }}" class="btn btn-warning btn-sm" style="display:inline;"> ✏️</a>
+                            <form action="/delete_log/{{ l.id }}" method="POST" style="display:inline;">
+                                <button class="btn btn-danger btn-sm">🗑</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </table>
@@ -201,19 +228,52 @@
         {% endif %}
 
 
+
+        {% if page == "edit_logs" %}
+            <h3 class="text-center mb-4">Edit Log</h3>
+
+            <div class="container col-md-6">
+                <form action="/update_log/{{ log.id }}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="form-control" value="{{ log.date }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Check In</label>
+                    <input type="time" name="check_in" class="form-control" value="{{ log.check_in }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Check Out</label>
+                    <input type="time" name="check_out" class="form-control" value="{{ log.check_out }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Task</label>
+                    <input type="text" name="task" class="form-control" value="{{ log.task }}" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Update</button>
+            </form>
+            </div>
+            {% endif %}
+
+
+
         {% if page == "list" %}
-            <h3 class="text-center mb-4">Log Entries</h3>
+            <h3 class="text-center mb-4">Log Entries of {{ name }}</h3>
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover text-center align-middle">
-
+                <table class="table table-bordered table-hover text-center align-middle" style="width:100%;">
                     <thead class="table-dark">
                         <tr>
-                            <th>Date</th>
+                            <th style="width:30%;">Date</th>
                             <th>Check In</th>
                             <th>Check Out</th>
                             <th>Task</th>
                             <th>Total Hours</th>
+                            <th style="width:30%;">Actions</th>
                         </tr>
                     </thead>
 
@@ -225,17 +285,21 @@
                             <td>{{ f.check_out }}</td>
                             <td>{{ f.task }}</td>
                             <td>{{ f.total_hours }}</td>
+                            <td><a href="/edit_log/{{ f.id }}" class="btn btn-warning btn-sm" style="display:inline;"> ✏️</a>
+                                <form action="/delete_log/{{ f.id }}" method="POST" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm">🗑</button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
-        {% endif %}
+            {% endif %}
+
 
 
         {% if page == "home" %}
-            <!-- <h3 class="text-center">Welcome, {{ name }}!</h3> -->
-
             <div class="text-center mt-4">
                 <form action="/logout" method="post">
                     <button type="submit" class="btn btn-danger w-100">Logout</button>
