@@ -42,7 +42,6 @@
                 </form>
 
                 {% if role == 1 or page ==  "admin_screen" %}
-                    
                     <form action="/user_logs" method="get">
                         <button type="submit" class="btn btn-warning me-2">User List</button>
                     </form>
@@ -60,84 +59,95 @@
 <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
     <div class="card shadow p-4"style="{% if page == 'list' or page == 'view_logs' or page == 'edit_logs' %} width:100%; max-width:1200px; {% else %} width:450px; {% endif %}">
 
-
         {% if page == "first_page" or page == "Home" %}
                 <h2 class="text-center mb-4">Welcome to Log Management System</h2>
         {% endif %}
 
         {% if page == "register" %}
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+                <h3 class="text-center mb-3">Create Account</h3>
 
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
+                <form action="/register" method="post">
 
-            <h3 class="text-center mb-3">Create Account</h3>
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
 
-            <form action="/register" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Gmail</label>
+                        <input type="email" name="gmail" class="form-control" pattern="[a-zA-Z0-9._%+-]+@gmail\.com$" title="Please enter a valid Gmail address (example@gmail.com)" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    <input type="text" name="name" class="form-control" required>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Gmail</label>
-                    <input type="email" name="gmail" class="form-control" pattern="[a-zA-Z0-9._%+-]+@gmail\.com$" title="Please enter a valid Gmail address (example@gmail.com)" required>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" name="confirm" class="form-control" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
+                    <div class="mb-3">
+                        <input type="radio" id="admin" name="role" value="admin">
+                        <label for="admin">Register as Admin</label>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Confirm Password</label>
-                    <input type="password" name="confirm" class="form-control" required>
-                </div>
+                    <button type="submit" class="btn btn-primary w-100">Register</button>
 
-                <div class="mb-3">
-                    <input type="radio" id="admin" name="role" value="admin">
-                    <label for="admin">Register as Admin</label>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">Register</button>
-
-                <p class="text-center mt-3">Already have an account?<a href="/login">Login</a></p>
-            </form>
+                    <p class="text-center mt-3">Already have an account?<a href="/login">Login</a></p>
+                </form>
         {% endif %}
 
 
         {% if page == "login" %}
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+
+                <h3 class="text-center mb-3">Login</h3>
+
+                <form action="/login" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Gmail</label>
+                        <input type="email" name="gmail" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">Login</button><br><br>
+                    <a href="/forgot_password" class="text-primary d-block text-center">Forgot Password?</a>
+
+                    <p class="text-center mt-3">No account?<a href="/register">Register</a></p>
+                </form>
         {% endif %}
 
-            <h3 class="text-center mb-3">Login</h3>
+        {% if page == "verify_otp" %}
+            <div class="card p-4 mx-auto mt-5" style="width: 400px;">
+                <h3 class="text-center mb-3">Verify OTP</h3>
+                
+                {% if error %}
+                    <p class="text-danger">{{ error }}</p>
+                {% endif %}
 
-            <form action="/login" method="post">
-                <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    <input type="text" name="name" class="form-control" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Gmail</label>
-                    <input type="email" name="gmail" class="form-control" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-
-                <button type="submit" class="btn btn-success w-100">Login</button>
-
-                <p class="text-center mt-3">
-                    No account?
-                    <a href="/register">Register</a>
-                </p>
-            </form>
+                <form action="/verify_otp" method="post">
+                    <input type="text" name="otp" class="form-control mb-3" placeholder="Enter OTP" required>
+                    <button class="btn btn-primary w-100">Verify</button>
+                </form>
+            </div>
         {% endif %}
+
 
         {% if page == "screen" %}
             <h2 class="text-center mb-4">Welcome {{name}} !</h2>
