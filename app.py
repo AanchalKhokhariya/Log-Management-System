@@ -2,6 +2,13 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import random 
+import smtplib
+from email.mime.text import MIMEText
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -9,8 +16,13 @@ app.secret_key = "supersecretkey"
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:2807@localhost/user_log"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-db = SQLAlchemy(app)
+app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
+app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
+app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS") == "True"
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
 
+db = SQLAlchemy(app)
 
 class User(db.Model):
     __tablename__ = "users"
@@ -60,45 +72,74 @@ def user_name():
 def show_register():
     return render_template("main.html", page="register", is_logged_in="user_id" in session)
 
-
 @app.route("/register", methods=["POST"])
 def register():
-    selected_role = request.form.get('role')
-    name = request.form["name"]
-    gmail = request.form["gmail"]
-    password = request.form["password"]
-    confirm = request.form["confirm"]
+    name = request.form.get("name")
+    gmail = request.form.get("gmail")
+    password = request.form.get("password")
+    confirm = request.form.get("confirm")
+    selected_role = request.form.get("role")
 
     if password != confirm:
-        return render_template("main.html", page="register", error="Passwords do not match", is_logged_in="user_id" in session)
+        return render_template("main.html", page="register", error="Passwords do not match")
 
-    existing_user = User.query.filter((User.name == name) | (User.gmail == gmail)).first()
+    if User.query.filter((User.name == name) | (User.gmail == gmail)).first():
+        return render_template("main.html", page="register", error="User already exists!")
 
-    if existing_user:
-        return render_template("main.html", page="register", error="User already exists! Try another name or gmail.")
+    otp = str(random.randint(100000, 999999))
+    session.update({
+        "otp": otp,
+        "temp_name": name,
+        "temp_gmail": gmail,
+        "temp_password": password,
+        "temp_role": selected_role
+    })
+
+    send_otp_email(gmail, otp)
+
+    return render_template("main.html", page="verify_otp")
+
+    
+@app.route("/verify_otp", methods=["POST"])
+def verify_otp():
+    input_otp = request.form.get("otp")
+
+    if input_otp != session.get("otp"):
+        return render_template("main.html", page="verify_otp", error="Invalid OTP! Try again.")
+
+    new_user = User(
+        name=session["temp_name"],
+        gmail=session["temp_gmail"],
+        password=generate_password_hash(session["temp_password"]),
+        role=1 if session["temp_role"] == "admin" else 0
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    for key in ["otp", "temp_name", "temp_gmail", "temp_password", "temp_role"]:
+        session.pop(key, None)
+
+    return redirect(url_for("login"))
+
+def send_otp_email(receiver, otp):
+    sender = app.config["MAIL_USERNAME"]
+    password = app.config["MAIL_PASSWORD"]
+
+    msg = MIMEText(f"Your OTP for registration is: {otp}")
+    msg["Subject"] = "Your OTP Verification Code"
+    msg["From"] = sender
+    msg["To"] = receiver
 
     try:
-        hashed = generate_password_hash(password)
-
-        if selected_role == "admin":
-            role_value = 1
-        else:
-            role_value = 0
-
-        new_user = User(
-            name=name,
-            gmail=gmail,
-            password=hashed,
-            role=role_value
-        )
-        
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for("login"))
-
-    except:
-        db.session.rollback()
-        return render_template("main.html", page="register", error="Registration Failed", is_logged_in="user_id" in session)
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.sendmail(sender, receiver, msg.as_string())
+        return True
+    except Exception as e:
+        print("Email Error:", e)
+        return False
 
 
 @app.route("/login")
@@ -265,9 +306,7 @@ def update_log(log_id):
         logs = Log.query.filter_by(user_id=session["user_id"]).all()
         return render_template("main.html", page="list", data=logs, is_logged_in=True)
 
-    except Exception as e:
-        print("UPDATE ERROR:", e)
-        db.session.rollback()
+    except Exception:
         return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
 
 
@@ -331,7 +370,3 @@ def logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-
-# Testing
