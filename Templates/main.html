@@ -63,6 +63,17 @@
                 <h2 class="text-center mb-4">Welcome to Log Management System</h2>
         {% endif %}
 
+
+        {% if page == "screen" %}
+            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        {% endif %}
+
+
+        {% if page == "admin_screen" %}
+            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        {% endif %}
+
+
         {% if page == "register" %}
             {% if error %}
                 <div class="alert alert-danger">{{ error }}</div>
@@ -103,6 +114,22 @@
         {% endif %}
 
 
+        {% if page == "verify_otp" %}
+            <div class="card p-4 mx-auto mt-5" style="width: 400px;">
+                <h3 class="text-center mb-3">Verify OTP</h3>
+                
+                {% if error %}
+                    <p class="text-danger">{{ error }}</p>
+                {% endif %}
+
+                <form action="/verify_otp" method="post">
+                    <input type="text" name="otp" class="form-control mb-3" placeholder="Enter OTP" required>
+                    <button class="btn btn-primary w-100">Verify</button>
+                </form>
+            </div>
+        {% endif %}
+
+
         {% if page == "login" %}
             {% if error %}
                 <div class="alert alert-danger">{{ error }}</div>
@@ -133,29 +160,87 @@
                 </form>
         {% endif %}
 
-        {% if page == "verify_otp" %}
-            <div class="card p-4 mx-auto mt-5" style="width: 400px;">
-                <h3 class="text-center mb-3">Verify OTP</h3>
-                
-                {% if error %}
-                    <p class="text-danger">{{ error }}</p>
-                {% endif %}
 
-                <form action="/verify_otp" method="post">
-                    <input type="text" name="otp" class="form-control mb-3" placeholder="Enter OTP" required>
-                    <button class="btn btn-primary w-100">Verify</button>
-                </form>
+        {% if page == "forgot_password" %}
+            <div class="container mt-5">
+                <div class="card p-4 mx-auto" style="max-width: 400px;">
+                    <h4 class="text-center mb-3">Forgot Password</h4>
+
+                    {% if error %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endif %}
+
+                    <form method="post" action="/forgot_password">
+                        <div class="mb-3">
+                            <label class="form-label">Registered Email</label>
+                            <input type="email" name="gmail" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Send OTP
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <a href="/login">Back to Login</a>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
 
-        {% if page == "screen" %}
-            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        {% if page == "verify_fp_otp" %}
+            <div class="container mt-5">
+                <div class="card p-4 mx-auto" style="max-width: 400px;">
+                    <h4 class="text-center mb-3">Verify OTP</h4>
+
+                    {% if error %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endif %}
+
+                    <form method="post" action="/verify_fp_otp">
+                        <div class="mb-3">
+                            <label class="form-label">Enter OTP</label>
+                            <input type="text" name="otp" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            Verify OTP
+                        </button>
+                    </form>
+                </div>
+            </div>
         {% endif %}
 
-        {% if page == "admin_screen" %}
-            <h2 class="text-center mb-4">Welcome {{name}} !</h2>
+        
+        {% if page == "reset_password" %}
+            <div class="container mt-5">
+                <div class="card p-4 mx-auto" style="max-width: 400px;">
+                    <h4 class="text-center mb-3">Reset Password</h4>
+
+                    {% if error %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endif %}
+
+                    <form method="post" action="/reset_password">
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" name="confirm" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
         {% endif %}
+        
 
         {% if page == "add_logs" %}
         {% if error %}
@@ -236,7 +321,6 @@
                 <p>No logs available</p>
             {% endif %}
         {% endif %}
-
 
 
         {% if page == "edit_logs" %}

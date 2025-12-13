@@ -67,6 +67,23 @@ def user_name():
         return {"name": session["name"]}
     return {"name": ""}
 
+@app.route("/screen")
+def screen():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    return render_template("main.html",page="screen",name=session["name"],role=session["role"],is_logged_in=True)
+
+@app.route("/admin_screen")
+def admin_screen():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    if session["role"] != 1:
+        return "Access Denied"
+
+    return render_template("main.html",page="admin_screen",name=session["name"], role=session["role"], is_logged_in=True)
+
 
 @app.route("/register")
 def show_register():
@@ -172,24 +189,96 @@ def login():
 
     return render_template("main.html", page="login", error="Invalid name or password")
 
-@app.route("/screen")
-def screen():
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "GET":
+        return render_template("main.html", page="forgot_password")
+
+    gmail = request.form.get("gmail")
+    user = User.query.filter_by(gmail=gmail).first()
+
+    if not user:
+        return render_template("main.html", page="forgot_password", error="Email not registered")
+
+    otp = str(random.randint(100000, 999999))
+    session["fp_otp"] = otp
+    session["fp_gmail"] = gmail
+
+    send_otp_email(gmail, otp)
+
+    return render_template("main.html", page="verify_fp_otp")
+
+@app.route("/verify_fp_otp", methods=["POST"])
+def verify_fp_otp():
+    input_otp = request.form.get("otp")
+
+    if input_otp != session.get("fp_otp"):
+        return render_template("main.html", page="verify_fp_otp", error="Invalid OTP")
+
+    return render_template("main.html", page="reset_password")
+
+
+@app.route("/reset_password", methods=["POST"])
+def reset_password():
+    password = request.form.get("password")
+    confirm = request.form.get("confirm")
+
+    if password != confirm:
+        return render_template("main.html", page="reset_password", error="Passwords do not match")
+
+    user = User.query.filter_by(gmail=session.get("fp_gmail")).first()
+    if not user:
+        return redirect(url_for("login"))
+
+    user.password = generate_password_hash(password)
+    db.session.commit()
+
+    return redirect(url_for("login"))
+
+
+@app.route("/add_logs", methods=["GET", "POST"])
+def add_logs():
     if "user_id" not in session:
         return redirect(url_for("login"))
+
+    if request.method == "GET":
+        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
+
+    date = request.form.get("date")
+    check_in = request.form.get("check_in")
+    check_out = request.form.get("check_out")
+    task = request.form.get("task")
+
+    existing_log = Log.query.filter_by(user_id=session["user_id"], date=date).first()
+    if existing_log:
+        return render_template("main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True)
+
+    try:
+        t1 = datetime.strptime(check_in, "%H:%M")
+        t2 = datetime.strptime(check_out, "%H:%M")
+
+        total_hours = round((t2 - t1).total_seconds() / 3600, 2)
+        if total_hours < 0:
+            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True)
+
+        new_log = Log(
+            date=date,
+            check_in=t1.time(),
+            check_out=t2.time(),
+            task=task,
+            total_hours=total_hours,
+            user_id=session["user_id"]
+        )
+
+        db.session.add(new_log)
+        db.session.commit()
+
+        return redirect("/list")
+
+    except:
+        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
     
-    return render_template("main.html",page="screen",name=session["name"],role=session["role"],is_logged_in=True)
 
-@app.route("/admin_screen")
-def admin_screen():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    if session["role"] != 1:
-        return "Access Denied"
-
-    return render_template("main.html",page="admin_screen",name=session["name"], role=session["role"], is_logged_in=True)
-
-    
 @app.route("/user_logs", methods=["GET", "POST"])
 def user_logs():
     if "user_id" not in session:
@@ -308,50 +397,7 @@ def update_log(log_id):
 
     except Exception:
         return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
-
-
-@app.route("/add_logs", methods=["GET", "POST"])
-def add_logs():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    if request.method == "GET":
-        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
-
-    date = request.form.get("date")
-    check_in = request.form.get("check_in")
-    check_out = request.form.get("check_out")
-    task = request.form.get("task")
-
-    existing_log = Log.query.filter_by(user_id=session["user_id"], date=date).first()
-    if existing_log:
-        return render_template("main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True)
-
-    try:
-        t1 = datetime.strptime(check_in, "%H:%M")
-        t2 = datetime.strptime(check_out, "%H:%M")
-
-        total_hours = round((t2 - t1).total_seconds() / 3600, 2)
-        if total_hours < 0:
-            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True)
-
-        new_log = Log(
-            date=date,
-            check_in=t1.time(),
-            check_out=t2.time(),
-            task=task,
-            total_hours=total_hours,
-            user_id=session["user_id"]
-        )
-
-        db.session.add(new_log)
-        db.session.commit()
-
-        return redirect("/list")
-
-    except:
-        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
-
+    
 
 @app.route("/list", methods=["GET","POST"])
 def list_log():
