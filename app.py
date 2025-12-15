@@ -72,7 +72,7 @@ def screen():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-    return render_template("main.html",page="screen",name=session["name"],role=session["role"],is_logged_in=True)
+    return render_template("main.html", page="screen", name=session["name"], role=session["role"], is_logged_in=True)
 
 @app.route("/admin_screen")
 def admin_screen():
@@ -82,7 +82,7 @@ def admin_screen():
     if session["role"] != 1:
         return "Access Denied"
 
-    return render_template("main.html",page="admin_screen",name=session["name"], role=session["role"], is_logged_in=True)
+    return render_template("main.html", page="admin_screen", name=session["name"], role=session["role"], is_logged_in=True)
 
 
 @app.route("/register")
@@ -169,7 +169,7 @@ def show_login():
 @app.route("/login", methods=["POST"])
 def login():
     if "user_id" in session:
-        return "You must logout before logging in another user."
+        return render_template("main.html", page="home", error="User is already logged-in", is_logged_in=True)
 
     name = request.form["name"]
     gmail = request.form["gmail"]
@@ -186,7 +186,7 @@ def login():
             return redirect(url_for("admin_screen"))
         else:
             return redirect(url_for("screen"))
-
+        
     return render_template("main.html", page="login", error="Invalid name or password")
 
 @app.route("/forgot_password", methods=["GET", "POST"])
@@ -290,40 +290,13 @@ def user_logs():
 
     if request.method == "GET":
         user_names = User.query.all()
-        return render_template("main.html", page="user_logs", user_names=user_names,role=session["role"], is_logged_in=True)
+        return render_template("main.html", page="user_logs", user_names=user_names, role=session["role"], is_logged_in=True)
 
     if request.method == "POST":
         uid = request.form.get("user_id")
         logs = Log.query.filter_by(user_id=uid).all()
         user = User.query.get(uid)
-        return render_template("main.html", page="view_logs", logs=logs, name=user.name,role=session["role"], is_logged_in=True)
-
-    
-@app.route("/delete_log/<int:log_id>", methods=["POST"])
-def delete_log(log_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    log = Log.query.get(log_id)
-    if not log:
-        return "Log not found", 404
-
-    user = User.query.get(session["user_id"])
-    is_admin = (user.role == 1)
-
-    if (log.user_id != session["user_id"]) and (not is_admin):
-        return "Unauthorized", 403
-
-    db.session.delete(log)
-    db.session.commit()
-
-    if is_admin:
-        logs = Log.query.filter_by(user_id=log.user_id).all()
-        user = User.query.get(log.user_id)
-        return render_template("main.html", page="view_logs", logs=logs, name=user.name, is_logged_in=True)
-
-    logs = Log.query.filter_by(user_id=session["user_id"]).all()
-    return render_template("main.html", page="list", data=logs, is_logged_in=True)
+        return render_template("main.html", page="view_logs", logs=logs, name=user.name, role=session["role"], is_logged_in=True)
 
 
 @app.route("/edit_log/<int:log_id>", methods=["GET"])
@@ -364,7 +337,7 @@ def update_log(log_id):
     check_out = request.form.get("check_out")
     task = request.form.get("task")
 
-    def parse_time(value):
+    def str_time(value):
         try:
             return datetime.strptime(value, "%H:%M:%S")
         except ValueError:
@@ -373,8 +346,8 @@ def update_log(log_id):
     try:
         log.date = datetime.strptime(date, "%Y-%m-%d").date()
 
-        t1 = parse_time(check_in)
-        t2 = parse_time(check_out)
+        t1 = str_time(check_in)
+        t2 = str_time(check_out)
 
         total_hours = round((t2 - t1).total_seconds() / 3600, 2)
         if total_hours < 0:
@@ -397,6 +370,33 @@ def update_log(log_id):
 
     except Exception:
         return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
+
+
+@app.route("/delete_log/<int:log_id>", methods=["POST"])
+def delete_log(log_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    log = Log.query.get(log_id)
+    if not log:
+        return "Log not found", 404
+
+    user = User.query.get(session["user_id"])
+    is_admin = (user.role == 1)
+
+    if (log.user_id != session["user_id"]) and (not is_admin):
+        return "Unauthorized", 403
+
+    db.session.delete(log)
+    db.session.commit()
+
+    if is_admin:
+        logs = Log.query.filter_by(user_id=log.user_id).all()
+        user = User.query.get(log.user_id)
+        return render_template("main.html", page="view_logs", logs=logs, name=user.name, is_logged_in=True)
+
+    logs = Log.query.filter_by(user_id=session["user_id"]).all()
+    return render_template("main.html", page="list", data=logs, is_logged_in=True)
     
 
 @app.route("/list", methods=["GET","POST"])
@@ -415,4 +415,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
