@@ -1,11 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-<<<<<<< HEAD
 from datetime import date, datetime
-=======
-from datetime import datetime
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
 import random 
 import smtplib
 from email.mime.text import MIMEText
@@ -76,11 +72,7 @@ def screen():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-<<<<<<< HEAD
     return render_template("main.html", page="screen", gmail=session["gmail"], role=session["role"], is_logged_in=True)
-=======
-    return render_template("main.html", page="screen", name=session["name"], role=session["role"], is_logged_in=True)
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
 
 @app.route("/admin_screen")
 def admin_screen():
@@ -90,11 +82,7 @@ def admin_screen():
     if session["role"] != 1:
         return "Access Denied"
 
-<<<<<<< HEAD
     return render_template("main.html", page="admin_screen", gmail=session["gmail"], role=session["role"], is_logged_in=True)
-=======
-    return render_template("main.html", page="admin_screen", name=session["name"], role=session["role"], is_logged_in=True)
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
 
 
 @app.route("/register")
@@ -111,7 +99,6 @@ def register():
 
     if password != confirm:
         return render_template("main.html", page="register", error="Passwords do not match")
-<<<<<<< HEAD
     
     if User.query.filter((User.name == name) | (User.gmail == gmail)).first():
         return render_template("main.html", page="register", error="User already exists!")
@@ -121,11 +108,6 @@ def register():
     
     if User.query.filter(User.gmail == gmail).first():
         return render_template("main.html", page="register", error="User with this Gmail already exists!")
-=======
-
-    if User.query.filter((User.name == name) | (User.gmail == gmail)).first():
-        return render_template("main.html", page="register", error="User already exists!")
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
 
     otp = str(random.randint(100000, 999999))
     session.update({
@@ -193,11 +175,7 @@ def show_login():
 @app.route("/login", methods=["POST"])
 def login():
     if "user_id" in session:
-<<<<<<< HEAD
         return render_template( "main.html", page="home", error="User is already logged-in", is_logged_in=True)
-=======
-        return render_template("main.html", page="home", error="User is already logged-in", is_logged_in=True)
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
 
     gmail = request.form.get("gmail")
     password = request.form.get("password")
@@ -214,7 +192,6 @@ def login():
             return redirect(url_for("admin_screen"))
         else:
             return redirect(url_for("screen"))
-<<<<<<< HEAD
 
     return render_template("main.html", page="login", error="Invalid email or password")
 
@@ -413,196 +390,6 @@ def update_log(log_id):
 
     except Exception:
         return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
-=======
-        
-    return render_template("main.html", page="login", error="Invalid name or password")
-
-@app.route("/forgot_password", methods=["GET", "POST"])
-def forgot_password():
-    if request.method == "GET":
-        return render_template("main.html", page="forgot_password")
-
-    gmail = request.form.get("gmail")
-    user = User.query.filter_by(gmail=gmail).first()
-
-    if not user:
-        return render_template("main.html", page="forgot_password", error="Email not registered")
-
-    otp = str(random.randint(100000, 999999))
-    session["fp_otp"] = otp
-    session["fp_gmail"] = gmail
-
-    send_otp_email(gmail, otp)
-
-    return render_template("main.html", page="verify_fp_otp")
-
-@app.route("/verify_fp_otp", methods=["POST"])
-def verify_fp_otp():
-    input_otp = request.form.get("otp")
-
-    if input_otp != session.get("fp_otp"):
-        return render_template("main.html", page="verify_fp_otp", error="Invalid OTP")
-
-    return render_template("main.html", page="reset_password")
-
-
-@app.route("/reset_password", methods=["POST"])
-def reset_password():
-    password = request.form.get("password")
-    confirm = request.form.get("confirm")
-
-    if password != confirm:
-        return render_template("main.html", page="reset_password", error="Passwords do not match")
-
-    user = User.query.filter_by(gmail=session.get("fp_gmail")).first()
-    if not user:
-        return redirect(url_for("login"))
-
-    user.password = generate_password_hash(password)
-    db.session.commit()
-
-    return redirect(url_for("login"))
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
-
-
-@app.route("/delete_log/<int:log_id>", methods=["POST"])
-def delete_log(log_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    log = Log.query.get(log_id)
-    if not log:
-        return "Log not found", 404
-
-    user = User.query.get(session["user_id"])
-    is_admin = (user.role == 1)
-
-    if (log.user_id != session["user_id"]) and (not is_admin):
-        return "Unauthorized", 403
-
-    db.session.delete(log)
-    db.session.commit()
-
-<<<<<<< HEAD
-    if is_admin:
-        logs = Log.query.filter_by(user_id=log.user_id).all()
-        user = User.query.get(log.user_id)
-        return render_template("main.html", page="view_logs", logs=logs, name=user.name, is_logged_in=True)
-
-=======
-        total_hours = round((t2 - t1).total_seconds() / 3600, 2)
-        if total_hours < 0:
-            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True)
-
-        new_log = Log(
-            date=date,
-            check_in=t1.time(),
-            check_out=t2.time(),
-            task=task,
-            total_hours=total_hours,
-            user_id=session["user_id"]
-        )
-
-        db.session.add(new_log)
-        db.session.commit()
-
-        return redirect("/list")
-
-    except:
-        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
-    
-
-@app.route("/user_logs", methods=["GET", "POST"])
-def user_logs():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    current_user = User.query.get(session["user_id"])
-    if current_user.role != 1:
-        return "Access Denied"
-
-    if request.method == "GET":
-        user_names = User.query.all()
-        return render_template("main.html", page="user_logs", user_names=user_names, role=session["role"], is_logged_in=True)
-
-    if request.method == "POST":
-        uid = request.form.get("user_id")
-        logs = Log.query.filter_by(user_id=uid).all()
-        user = User.query.get(uid)
-        return render_template("main.html", page="view_logs", logs=logs, name=user.name, role=session["role"], is_logged_in=True)
-
-
-@app.route("/edit_log/<int:log_id>", methods=["GET"])
-def edit_log(log_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    log = Log.query.get(log_id)
-    if not log:
-        return "Log not found", 404
-
-    user = User.query.get(session["user_id"])
-    is_admin = (user.role == 1)
-
-    if (log.user_id != session["user_id"]) and (not is_admin):
-        return "Unauthorized", 403
-
-    return render_template("main.html", page="edit_logs", log=log, is_logged_in=True)
-
-
-@app.route("/update_log/<int:log_id>", methods=["POST"])
-def update_log(log_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    log = db.session.get(Log, log_id)
-    if not log:
-        return "Log not found", 404
-
-    user = db.session.get(User, session["user_id"])
-    is_admin = (user.role == 1)
-
-    if (log.user_id != session["user_id"]) and (not is_admin):
-        return "Unauthorized", 403
-
-    date = request.form.get("date")
-    check_in = request.form.get("check_in")
-    check_out = request.form.get("check_out")
-    task = request.form.get("task")
-
-    def str_time(value):
-        try:
-            return datetime.strptime(value, "%H:%M:%S")
-        except ValueError:
-            return datetime.strptime(value, "%H:%M")
-
-    try:
-        log.date = datetime.strptime(date, "%Y-%m-%d").date()
-
-        t1 = str_time(check_in)
-        t2 = str_time(check_out)
-
-        total_hours = round((t2 - t1).total_seconds() / 3600, 2)
-        if total_hours < 0:
-            return render_template("main.html", page="edit_logs", log=log, error="Check-out must be after check-in", is_logged_in=True)
-
-        log.check_in = t1.time()
-        log.check_out = t2.time()
-        log.task = task
-        log.total_hours = total_hours
-
-        db.session.commit()
-
-        if is_admin:
-            logs = Log.query.filter_by(user_id=log.user_id).all()
-            u = db.session.get(User, log.user_id)
-            return render_template("main.html", page="view_logs", logs=logs, name=u.name, is_logged_in=True)
-
-        logs = Log.query.filter_by(user_id=session["user_id"]).all()
-        return render_template("main.html", page="list", data=logs, is_logged_in=True)
-
-    except Exception:
-        return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
 
 
 @app.route("/delete_log/<int:log_id>", methods=["POST"])
@@ -628,7 +415,6 @@ def delete_log(log_id):
         user = User.query.get(log.user_id)
         return render_template("main.html", page="view_logs", logs=logs, name=user.name, is_logged_in=True)
 
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
     logs = Log.query.filter_by(user_id=session["user_id"]).all()
     return render_template("main.html", page="list", data=logs, is_logged_in=True)
     
@@ -649,8 +435,4 @@ def logout():
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     app.run(debug=True)
-=======
-    app.run()
->>>>>>> e125a7aafe1cfa0982e8e3fb2dd35f5801c99c6d
