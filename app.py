@@ -175,7 +175,7 @@ def show_login():
 @app.route("/login", methods=["POST"])
 def login():
     if "user_id" in session:
-        return render_template( "main.html", page="home", error="User is already logged-in", is_logged_in=True)
+        return render_template("main.html", page="home", error="User is already logged-in", is_logged_in=True)
 
     gmail = request.form.get("gmail")
     password = request.form.get("password")
@@ -249,7 +249,7 @@ def add_logs():
         return redirect(url_for("login"))
 
     if request.method == "GET":
-        return render_template( "main.html", page="add_logs", role=session["role"], is_logged_in=True   )
+        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True   )
 
     date_str = request.form.get("date")
     check_in = request.form.get("check_in")
@@ -257,20 +257,20 @@ def add_logs():
     task = request.form.get("task")
 
     if not date_str:
-        return render_template( "main.html", page="add_logs", role=session["role"], is_logged_in=True, today=date.today())
+        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True, today=date.today())
 
     log_date = datetime.strptime(date_str, "%Y-%m-%d").date()
 
     if log_date > date.today():
-        return render_template( "main.html", page="add_logs", error="You cannot add logs for a future date!", role=session["role"], is_logged_in=True, today=date.today())
+        return render_template("main.html", page="add_logs", error="You cannot add logs for a future date!", role=session["role"], is_logged_in=True, today=date.today())
 
     existing_log = Log.query.filter_by( user_id=session["user_id"], date=log_date).first()
 
     if existing_log:
-        return render_template( "main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True )
+        return render_template("main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True )
 
     if check_in == check_out:
-        return render_template( "main.html", page="add_logs", error="Check-in time can't be same as Check-out", role=session["role"], is_logged_in=True)
+        return render_template("main.html", page="add_logs", error="Check-in time can't be same as Check-out", role=session["role"], is_logged_in=True)
 
     try:
         t1 = datetime.strptime(check_in, "%H:%M")
@@ -279,7 +279,7 @@ def add_logs():
         total_hours = round((t2 - t1).total_seconds() / 3600, 2)
 
         if total_hours < 0:
-            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True )
+            return render_template("main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True )
 
         new_log = Log(
             date=log_date,
@@ -296,7 +296,7 @@ def add_logs():
         return redirect("/list")
 
     except Exception as e:
-        return render_template( "main.html", page="add_logs", error="Something went wrong", role=session["role"], is_logged_in=True)
+        return render_template("main.html", page="add_logs", error="Something went wrong", role=session["role"], is_logged_in=True)
 
     
 @app.route("/user_logs", methods=["GET", "POST"])
@@ -352,22 +352,22 @@ def update_log(log_id):
     if (log.user_id != session["user_id"]) and (not is_admin):
         return "Unauthorized", 403
 
-    str_date = request.form.get("str_date")
+    date = request.form.get("date")
     check_in = request.form.get("check_in")
     check_out = request.form.get("check_out")
     task = request.form.get("task")
 
-    def str_time(value):
+    def parse_time(value):
         try:
             return datetime.strptime(value, "%H:%M:%S")
         except ValueError:
             return datetime.strptime(value, "%H:%M")
 
     try:
-        log.date = datetime.strptime(str_date, "%Y-%m-%d").date()
+        log.date = datetime.strptime(date, "%Y-%m-%d").date()
 
-        t1 = str_time(check_in)
-        t2 = str_time(check_out)
+        t1 = parse_time(check_in)
+        t2 = parse_time(check_out)
 
         total_hours = round((t2 - t1).total_seconds() / 3600, 2)
         if total_hours < 0:
@@ -388,7 +388,9 @@ def update_log(log_id):
         logs = Log.query.filter_by(user_id=session["user_id"]).all()
         return render_template("main.html", page="list", data=logs, is_logged_in=True)
 
-    except Exception:
+    except Exception as e:
+        print("UPDATE ERROR:", e)
+        db.session.rollback()
         return render_template("main.html", page="edit_logs", log=log, error="Failed to update", is_logged_in=True)
 
 
