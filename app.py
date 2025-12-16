@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import date, datetime
 import random 
 import smtplib
 from email.mime.text import MIMEText
@@ -72,7 +72,7 @@ def screen():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-    return render_template("main.html", page="screen", name=session["name"], role=session["role"], is_logged_in=True)
+    return render_template("main.html", page="screen", gmail=session["gmail"], role=session["role"], is_logged_in=True)
 
 @app.route("/admin_screen")
 def admin_screen():
@@ -82,7 +82,7 @@ def admin_screen():
     if session["role"] != 1:
         return "Access Denied"
 
-    return render_template("main.html", page="admin_screen", name=session["name"], role=session["role"], is_logged_in=True)
+    return render_template("main.html", page="admin_screen", gmail=session["gmail"], role=session["role"], is_logged_in=True)
 
 
 @app.route("/register")
@@ -99,9 +99,15 @@ def register():
 
     if password != confirm:
         return render_template("main.html", page="register", error="Passwords do not match")
-
+    
     if User.query.filter((User.name == name) | (User.gmail == gmail)).first():
         return render_template("main.html", page="register", error="User already exists!")
+
+    if User.query.filter(User.name == name).first():
+        return render_template("main.html", page="register", error="Username already exists!")
+    
+    if User.query.filter(User.gmail == gmail).first():
+        return render_template("main.html", page="register", error="User with this Gmail already exists!")
 
     otp = str(random.randint(100000, 999999))
     session.update({
@@ -169,25 +175,26 @@ def show_login():
 @app.route("/login", methods=["POST"])
 def login():
     if "user_id" in session:
-        return render_template("main.html", page="home", error="User is already logged-in", is_logged_in=True)
+        return render_template( "main.html", page="home", error="User is already logged-in", is_logged_in=True)
 
-    name = request.form["name"]
-    gmail = request.form["gmail"]
-    password = request.form["password"]
+    gmail = request.form.get("gmail")
+    password = request.form.get("password")
 
-    user = User.query.filter_by(name=name, gmail=gmail).first()
+    user = User.query.filter_by(gmail=gmail).first()
 
     if user and check_password_hash(user.password, password):
         session["user_id"] = user.id
+        session["gmail"] = user.gmail
         session["name"] = user.name
-        session["role"] = user.role   
+        session["role"] = user.role
 
         if user.role == 1:
             return redirect(url_for("admin_screen"))
         else:
             return redirect(url_for("screen"))
-        
-    return render_template("main.html", page="login", error="Invalid name or password")
+
+    return render_template("main.html", page="login", error="Invalid email or password")
+
 
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
@@ -242,27 +249,40 @@ def add_logs():
         return redirect(url_for("login"))
 
     if request.method == "GET":
-        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
+        return render_template( "main.html", page="add_logs", role=session["role"], is_logged_in=True   )
 
-    date = request.form.get("date")
+    date_str = request.form.get("date")
     check_in = request.form.get("check_in")
     check_out = request.form.get("check_out")
     task = request.form.get("task")
 
-    existing_log = Log.query.filter_by(user_id=session["user_id"], date=date).first()
+    if not date_str:
+        return render_template( "main.html", page="add_logs", role=session["role"], is_logged_in=True, today=date.today())
+
+    log_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+    if log_date > date.today():
+        return render_template( "main.html", page="add_logs", error="You cannot add logs for a future date!", role=session["role"], is_logged_in=True, today=date.today())
+
+    existing_log = Log.query.filter_by( user_id=session["user_id"], date=log_date).first()
+
     if existing_log:
-        return render_template("main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True)
+        return render_template( "main.html", page="add_logs", error="A log for this date already exists!", role=session["role"], is_logged_in=True )
+
+    if check_in == check_out:
+        return render_template( "main.html", page="add_logs", error="Check-in time can't be same as Check-out", role=session["role"], is_logged_in=True)
 
     try:
         t1 = datetime.strptime(check_in, "%H:%M")
         t2 = datetime.strptime(check_out, "%H:%M")
 
         total_hours = round((t2 - t1).total_seconds() / 3600, 2)
+
         if total_hours < 0:
-            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True)
+            return render_template( "main.html", page="add_logs", error="Check-out must be after check-in", role=session["role"], is_logged_in=True )
 
         new_log = Log(
-            date=date,
+            date=log_date,
             check_in=t1.time(),
             check_out=t2.time(),
             task=task,
@@ -275,10 +295,10 @@ def add_logs():
 
         return redirect("/list")
 
-    except:
-        return render_template("main.html", page="add_logs", role=session["role"], is_logged_in=True)
-    
+    except Exception as e:
+        return render_template( "main.html", page="add_logs", error="Something went wrong", role=session["role"], is_logged_in=True)
 
+    
 @app.route("/user_logs", methods=["GET", "POST"])
 def user_logs():
     if "user_id" not in session:
@@ -332,7 +352,7 @@ def update_log(log_id):
     if (log.user_id != session["user_id"]) and (not is_admin):
         return "Unauthorized", 403
 
-    date = request.form.get("date")
+    str_date = request.form.get("str_date")
     check_in = request.form.get("check_in")
     check_out = request.form.get("check_out")
     task = request.form.get("task")
@@ -344,7 +364,7 @@ def update_log(log_id):
             return datetime.strptime(value, "%H:%M")
 
     try:
-        log.date = datetime.strptime(date, "%Y-%m-%d").date()
+        log.date = datetime.strptime(str_date, "%Y-%m-%d").date()
 
         t1 = str_time(check_in)
         t2 = str_time(check_out)
@@ -404,8 +424,8 @@ def list_log():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    data = Log.query.filter_by(user_id=session["user_id"]).all()
-    return render_template("main.html", page="list", data=data,role=session["role"], is_logged_in=True)
+    data = (Log.query.filter_by(user_id=session["user_id"]).order_by(Log.date.desc()).all())
+    return render_template("main.html", page="list", data=data, role=session["role"], is_logged_in=True)
 
 
 @app.route("/logout", methods=["POST"])
@@ -415,4 +435,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
