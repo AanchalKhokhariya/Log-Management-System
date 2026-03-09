@@ -2,9 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = os.getenv("SECRET_KEY")
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:2807@localhost/user_log"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
