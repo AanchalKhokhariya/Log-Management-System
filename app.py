@@ -22,28 +22,9 @@ app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS") == "True"
 app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
 app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
 
-db = SQLAlchemy(app)
+from models import db, User, Log
 
-class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False, unique=True)
-    gmail = db.Column(db.String(200), nullable=False, unique=True)
-    password = db.Column(db.Text, nullable=False)
-    role = db.Column(db.Integer, nullable=False) 
-    log_entries = db.relationship('Log', backref='author', lazy=True)
-
-
-class Log(db.Model):
-    __tablename__ = "logs"
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    check_in = db.Column(db.Time, nullable=False)
-    check_out = db.Column(db.Time, nullable=False)
-    task = db.Column(db.Text, nullable=False)
-    total_hours = db.Column(db.Float, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
+db.init_app(app)
 
 with app.app_context():
     db.create_all()
@@ -437,29 +418,21 @@ def logout():
 
 from flask import request, jsonify
 
-
-@app.route("/graphql", methods=["GET", "POST"])
+@app.route("/graphql", methods=["POST"])
 def graphql():
-    from schema import schema   # ✅ import here (breaks circular import)
-
-    if request.method == "GET":
-        return """
-        <h2>GraphQL Endpoint</h2>
-        <p>Use POST request to interact</p>
-        """
-
+    from schema import schema
     data = request.get_json()
 
-    result = schema.execute(
+    with app.app_context():
+        result = schema.execute(
         data.get("query"),
-        variables=data.get("variables")
+        variables=data.get("variables"),
+        context_value={"session": db.session}
     )
 
     response = {}
-
     if result.errors:
         response["errors"] = [str(e) for e in result.errors]
-
     if result.data:
         response["data"] = result.data
 

@@ -1,6 +1,6 @@
 import graphene
 from graphene_sqlalchemy import SQLAlchemyObjectType
-from app import User, Log, db
+from models import User, Log, db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
