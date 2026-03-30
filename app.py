@@ -435,6 +435,35 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+from flask import request, jsonify
+
+
+@app.route("/graphql", methods=["GET", "POST"])
+def graphql():
+    from schema import schema   # ✅ import here (breaks circular import)
+
+    if request.method == "GET":
+        return """
+        <h2>GraphQL Endpoint</h2>
+        <p>Use POST request to interact</p>
+        """
+
+    data = request.get_json()
+
+    result = schema.execute(
+        data.get("query"),
+        variables=data.get("variables")
+    )
+
+    response = {}
+
+    if result.errors:
+        response["errors"] = [str(e) for e in result.errors]
+
+    if result.data:
+        response["data"] = result.data
+
+    return jsonify(response)
 
 if __name__ == "__main__":
     app.run(debug=True)
