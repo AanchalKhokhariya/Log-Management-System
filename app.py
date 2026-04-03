@@ -418,25 +418,17 @@ def logout():
 
 from flask import request, jsonify
 
-@app.route("/graphql", methods=["POST"])
-def graphql():
-    from schema import schema
-    data = request.get_json()
+from flask_graphql import GraphQLView
+from schema import schema
 
-    with app.app_context():
-        result = schema.execute(
-        data.get("query"),
-        variables=data.get("variables"),
-        context_value={"session": db.session}
+app.add_url_rule(
+    '/graphql',
+    view_func=GraphQLView.as_view(
+        'graphql',
+        schema=schema,
+        graphiql=True, 
     )
-
-    response = {}
-    if result.errors:
-        response["errors"] = [str(e) for e in result.errors]
-    if result.data:
-        response["data"] = result.data
-
-    return jsonify(response)
+)
 
 if __name__ == "__main__":
     app.run(debug=True)

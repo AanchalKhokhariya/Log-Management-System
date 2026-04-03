@@ -1,17 +1,33 @@
 import graphene
-from graphene_sqlalchemy import SQLAlchemyObjectType
 from models import User, Log, db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 
-class UserType(SQLAlchemyObjectType):
-    class Meta:
-        model = User
+class UserType(graphene.ObjectType):
+    id = graphene.Int()
+    name = graphene.String()
+    gmail = graphene.String()
+    role = graphene.Int()
 
-class LogType(SQLAlchemyObjectType):
-    class Meta:
-        model = Log
+
+class LogType(graphene.ObjectType):
+    id = graphene.Int()
+    user_id = graphene.Int()
+    date = graphene.String()
+    check_in = graphene.String()
+    check_out = graphene.String()
+    task = graphene.String()
+    total_hours = graphene.Float()
+
+    def resolve_date(parent, info):
+        return str(parent.date)
+
+    def resolve_check_in(parent, info):
+        return str(parent.check_in)
+
+    def resolve_check_out(parent, info):
+        return str(parent.check_out)
 
 
 
